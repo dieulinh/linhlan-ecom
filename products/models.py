@@ -18,12 +18,22 @@ class Product(models.Model):
       self.og_price = self.price
       self.stripe_price = int(self.price*100)
     super().save(*args, **kwargs)  
+class Cart(models.Model):
+  user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+  created_at = models.DateTimeField(auto_now_add=True)
+  updated_at = models.DateTimeField(auto_now=True)
+  def save(self, *args,**kwargs):
+    if not self.id:
+      self.created_at = timezone.now()
+    self.updated_at = timezone.now()
+    super().save(*args, **kwargs)  
 
 class Offer(models.Model):
   code = models.CharField(max_length=10)
   description = models.CharField(max_length=255)
   discount = models.FloatField()
-class Cart(models.Model):
-  created_at = models.DateTimeField()
-  # product_id = models.ForeignKey(Product, on_delete=models.CASCADE)
 
+class CartItem(models.Model):
+  product_id = models.ForeignKey(Product, on_delete=models.CASCADE)
+  quantity = models.IntegerField(default=1)
+  cart_it = models.ForeignKey(Cart, on_delete=models.CASCADE)

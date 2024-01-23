@@ -30,7 +30,7 @@ const count = ref(0)
     <a href="https://github.com/vuejs/language-tools" target="_blank">Volar</a>
     in your IDE for a better DX
   </p>
-  <p class="read-the-docs">Here is development server aaaa</p>
+  <p class="read-the-docs">Here is development server, from Linh's computer</p>
 </template>
 
 <style scoped>

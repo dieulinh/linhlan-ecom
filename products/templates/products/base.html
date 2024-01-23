@@ -1,0 +1,13 @@
+<head>
+  <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+<a href="{% url 'home' %}"><h1>Linhlan store</h1></a>
+<h3>Welcome to Vet Office {{ name }}!</h3>
+    {% block content %}
+    {% endblock %}
+</body>

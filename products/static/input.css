@@ -1,0 +1,10 @@
+/* styles.css */
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Your custom styles go here */
+.btn-primary {
+  background-color: rgb(110, 208, 226);
+  color: #f0ffff;
+}

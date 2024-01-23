@@ -1,0 +1,29 @@
+{
+  "name": "linhlanshop",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npx tailwindcss -i ./products/static/input.css -o ./products/static/style.css --watch",
+    "build:css": "tailwindcss build products/static/styles.css -o style.css",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dieulinh/linhlan-ecom.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dieulinh/linhlan-ecom/issues"
+  },
+  "homepage": "https://github.com/dieulinh/linhlan-ecom#readme",
+  "dependencies": {
+    "flowbite": "^2.2.1",
+    "tailwindcss": "^3.4.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7"
+  }
+}

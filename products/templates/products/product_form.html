@@ -1,0 +1,27 @@
+<html>
+
+  <head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'style.css' %}">
+  </head>
+
+  <body>
+    <div class="max-w-xl mx-auto py-12 divide-y md:max-w-4xl">
+      <h1>Create Product</h1>
+    </div>
+    <div class="max-w-xl mx-auto py-12 divide-y md:max-w-4xl">
+      <form method="POST" id="product_form">
+        <div class="mt-8 max-w-md">
+          {% csrf_token %}
+          {{ form.as_p }}
+          <button type="submit"
+            class="my-1 bg-sky-500 px-4 py-2 font-semibold text-sm bg-cyan-500 rounded-lg shadow-sm btn-primary">Submit</button>
+        </div>
+      </form>
+    </div>
+    </div>
+  </body>
+</html>
