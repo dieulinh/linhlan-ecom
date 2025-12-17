@@ -3,6 +3,7 @@ from django.http import JsonResponse,HttpResponse
 from django.views.generic import ListView
 from .models import Product, CartItem, Cart,Order
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
 from .forms import ProductForm
 from django.contrib.auth.models import User
 import os
@@ -187,6 +188,49 @@ def create_product(request):
         'message': 'success'
       })
   return render(request,'products/product_form.html', {'form': form})
+
+@csrf_exempt
+@require_POST
+def instant_checkout(request):
+  try:
+    payload = json.loads(request.body or '{}') if request.body else {}
+  except json.JSONDecodeError:
+    payload = {}
+
+  product_id = payload.get('product_id') or request.POST.get('product_id')
+  quantity = int(payload.get('quantity') or request.POST.get('quantity') or 1)
+
+  if not product_id:
+    return JsonResponse({'detail': 'product_id is required'}, status=400)
+
+  try:
+    product = Product.objects.get(pk=product_id)
+  except Product.DoesNotExist:
+    return JsonResponse({'detail': 'Product not found'}, status=404)
+
+  user = User.objects.first()
+  cart = Cart.objects.create(user=user)
+  cart_item = CartItem.objects.create(quantity=quantity, product_id=product, cart_it=cart)
+
+  total = int(product.price * 100) * quantity
+  
+  order = Order.objects.create(cart_id=cart, total=total)
+
+  return JsonResponse({
+    'order_id': order.id,
+    'cart_id': cart.id,
+    'cart_item_id': cart_item.id,
+    'total': total,
+    'currency': 'usd',
+    'quantity': quantity,
+    'product': {
+      'id': product.id,
+      'name': product.name,
+      'price': float(product.price),
+      'stripe_price': float(product.price) * 100,
+      'image_url': product.image_url,
+    },
+  }, status=201)
 
 class ProductList(ListView):
   model = Product

@@ -32,8 +32,16 @@ class Offer(models.Model):
   code = models.CharField(max_length=10)
   description = models.CharField(max_length=255)
   discount = models.FloatField()
-
 class CartItem(models.Model):
   product_id = models.ForeignKey(Product, on_delete=models.CASCADE)
   quantity = models.IntegerField(default=1)
   cart_it = models.ForeignKey(Cart, on_delete=models.CASCADE)
+  def __str__(self):
+    return "product_id" + str(self.product_id) + "- quantity: "+ str(self.quantity)
+class Order(models.Model):
+  created_at = models.DateTimeField(auto_now_add=True)
+  updated_at = models.DateTimeField(auto_now=True)
+  total = models.IntegerField()
+  cart_id = models.ForeignKey(Cart, on_delete=models.CASCADE)
+  def __str__(self):
+    return "cart_id" + str(self.cart_id) + "- total: "+ str(self.total)

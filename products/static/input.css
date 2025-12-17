@@ -7,4 +7,12 @@
 .btn-primary {
   background-color: rgb(110, 208, 226);
   color: #f0ffff;
+  border-radius: 5px;
+  padding: 10px;
+}
+.btn-secondary {
+  background-color: rgb(210, 212, 234);
+  color: #f0ffff;
+  border-radius: 5px;
+  padding: 10px;
 }
