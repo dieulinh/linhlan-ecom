@@ -16,7 +16,6 @@ const handleAdd = (item) => {
   emit('add', item)
 }
 const handleInstantCheckout = (item) => {
-  // For simplicity, just add to cart for now
   emit('instant-checkout', item)
 }
 const handleView = (item) => {
@@ -35,7 +34,7 @@ const handleView = (item) => {
     </header>
 
     <div v-if="hasResults" class="grid">
-      <article v-for="item in props.items" :key="item.id" class="card" @click="handleView(item)">
+      <article v-for="item in props.items" :key="item.id" class="card">
         <div class="image" :style="{ backgroundImage: `url(${item.image_url})` }">
           <span class="pill">{{ item.category || 'General' }}</span>
         </div>
@@ -48,6 +47,7 @@ const handleView = (item) => {
           <div class="meta">
             <span class="rating">★ {{ item.rating ?? '—' }}</span>
             <div class="actions">
+              <button class="add ghost" type="button" @click="handleView(item)">View</button>
               <button class="add ghost" type="button" @click="handleAdd(item)">Add to cart</button>
               <button class="add" type="button" @click="handleInstantCheckout(item)">Buy now</button>
             </div>
