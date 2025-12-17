@@ -14,4 +14,5 @@ urlpatterns = [
   path('retrieve_sqs_messages/', views.retrieve_sqs_messages, name='retrieve_sqs_messages'),
   path('add-to-cart/<int:product_id>/', views.add_to_cart, name='add_to_cart'),
   path('instant_checkout/', views.instant_checkout, name='instant_checkout'),
+  path('orders/', views.order_list, name='order_list'),
 ]

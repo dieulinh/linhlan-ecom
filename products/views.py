@@ -10,6 +10,7 @@ import os
 import boto3
 import uuid
 import json
+from django.db.models import Prefetch
 # Create your views here.
 def retrieve_sqs_messages(request):
   print('RETRIEVE_MESSAGE')
@@ -265,3 +266,50 @@ class ProductList(ListView):
     }
 
     return JsonResponse(payload, json_dumps_params={'ensure_ascii': False})
+
+
+def order_list(request):
+  accept_header = request.headers.get('Accept', '')
+  wants_json = 'application/json' in accept_header or '*/*' in accept_header or not accept_header
+
+  if not wants_json:
+    return JsonResponse({'detail': 'Not Acceptable. Send Accept: application/json.'}, status=406)
+
+  orders = (
+    Order.objects.select_related('cart_id')
+    .prefetch_related(
+      Prefetch('cart_id__cartitem_set', queryset=CartItem.objects.select_related('product_id'))
+    )
+    .order_by('-created_at')[:20]
+  )
+
+  def serialize_order(order):
+    items = []
+    cart = order.cart_id
+    for item in cart.cartitem_set.all():
+      product = item.product_id
+      items.append({
+        'id': item.id,
+        'quantity': item.quantity,
+        'line_total': int(product.price * 100) * item.quantity,
+        'product': {
+          'id': product.id,
+          'name': product.name,
+          'price': float(product.price),
+          'image_url': product.image_url,
+        },
+      })
+
+    return {
+      'id': order.id,
+      'created_at': order.created_at.isoformat(),
+      'updated_at': order.updated_at.isoformat(),
+      'total': order.total,
+      'currency': 'usd',
+      'items': items,
+    }
+
+  return JsonResponse({
+    'count': len(orders),
+    'results': [serialize_order(order) for order in orders],
+  }, json_dumps_params={'ensure_ascii': False})
