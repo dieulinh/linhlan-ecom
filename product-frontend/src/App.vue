@@ -1,12 +1,17 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import Products from './components/Products.vue'
+import Orders from './components/Orders.vue'
 
 const products = ref([])
 const loading = ref(true)
 const error = ref('')
 const checkoutMessage = ref('')
 const checkoutError = ref('')
+const orders = ref([])
+const ordersLoading = ref(true)
+const ordersError = ref('')
+const activePage = ref('products')
 
 const search = ref('')
 const category = ref('all')
@@ -53,6 +58,14 @@ const cartTotal = computed(() => {
 const addToCart = (item) => {
   const current = cart.get(item.id) ?? 0
   cart.set(item.id, current + 1)
+}
+
+const goToOrders = () => {
+  activePage.value = 'orders'
+}
+
+const goToProducts = () => {
+  activePage.value = 'products'
 }
 
 const instantCheckout = async (item) => {
@@ -103,7 +116,36 @@ const loadProducts = async () => {
   }
 }
 
-onMounted(loadProducts)
+const loadOrders = async () => {
+  ordersLoading.value = true
+  ordersError.value = ''
+  try {
+    const res = await fetch('http://localhost:8000/products/orders/', {
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+
+    if (!res.ok) {
+      throw new Error(`Orders request failed: ${res.status}`)
+    }
+
+    const data = await res.json()
+    orders.value = Array.isArray(data?.results) ? data.results : []
+  } catch (err) {
+    ordersError.value = err?.message || 'Unable to load orders.'
+  } finally {
+    ordersLoading.value = false
+  }
+}
+
+const formatCurrency = (cents) => (cents / 100).toFixed(2)
+const formatDate = (iso) => (iso ? new Date(iso).toLocaleString() : '')
+
+onMounted(async () => {
+  await loadProducts()
+  await loadOrders()
+})
 </script>
 
 <template>
@@ -111,58 +153,66 @@ onMounted(loadProducts)
     <header class="topbar">
       <div class="brand">LinhLan Shop</div>
       <div class="cart">
+        <button class="link-btn" type="button" :class="{ active: activePage === 'products' }" @click="goToProducts">Products</button>
+        <button class="link-btn" type="button" :class="{ active: activePage === 'orders' }" @click="goToOrders">Orders</button>
         <span class="cart-count">{{ cartCount }} items</span>
         <span class="cart-total">${{ cartTotal.toFixed(2) }}</span>
       </div>
     </header>
 
     <main>
-      <section class="hero">
-        <div>
-          <p class="eyebrow">New arrivals</p>
-          <h1>Curated picks for everyday living</h1>
-          <p class="lede">
-            Explore a handful of products with clean design, quality materials, and prices that make sense.
-          </p>
-          <div class="actions">
-            <button class="btn primary">Shop featured</button>
-            <button class="btn ghost">View all</button>
+      <template v-if="activePage === 'products'">
+        <section class="hero">
+          <div>
+            <p class="eyebrow">New arrivals</p>
+            <h1>Curated picks for everyday living</h1>
+            <p class="lede">
+              Explore a handful of products with clean design, quality materials, and prices that make sense.
+            </p>
+            <div class="actions">
+              <button class="btn primary">Shop featured</button>
+              <button class="btn ghost">View all</button>
+            </div>
           </div>
-        </div>
-        <div class="hero-card">
-          <p class="muted">Fast shipping · 30-day returns</p>
-          <p class="muted">Secure checkout · Chat support</p>
-        </div>
-      </section>
+          <div class="hero-card">
+            <p class="muted">Fast shipping · 30-day returns</p>
+            <p class="muted">Secure checkout · Chat support</p>
+          </div>
+        </section>
 
-      <section class="controls">
-        <div class="field">
-          <label>Search</label>
-          <input v-model="search" type="search" placeholder="Find products" />
-        </div>
-        <div class="field">
-          <label>Category</label>
-          <select v-model="category">
-            <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Sort</label>
-          <select v-model="sort">
-            <option value="featured">Featured</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
-            <option value="rating">Top Rated</option>
-          </select>
-        </div>
-      </section>
+        <section class="controls">
+          <div class="field">
+            <label>Search</label>
+            <input v-model="search" type="search" placeholder="Find products" />
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <select v-model="category">
+              <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Sort</label>
+            <select v-model="sort">
+              <option value="featured">Featured</option>
+              <option value="price-asc">Price: Low to High</option>
+              <option value="price-desc">Price: High to Low</option>
+              <option value="rating">Top Rated</option>
+            </select>
+          </div>
+        </section>
 
-      <div v-if="loading" class="status">Loading products…</div>
-      <div v-else-if="error" class="status error">{{ error }}</div>
-      <Products v-else :items="filtered" @add="addToCart" @instant-checkout="instantCheckout" />
+        <div v-if="loading" class="status">Loading products…</div>
+        <div v-else-if="error" class="status error">{{ error }}</div>
+        <Products v-else :items="filtered" @add="addToCart" @instant-checkout="instantCheckout" />
 
-      <div v-if="checkoutMessage" class="status success">{{ checkoutMessage }}</div>
-      <div v-else-if="checkoutError" class="status error">{{ checkoutError }}</div>
+        <div v-if="checkoutMessage" class="status success">{{ checkoutMessage }}</div>
+        <div v-else-if="checkoutError" class="status error">{{ checkoutError }}</div>
+      </template>
+
+      <template v-else-if="activePage === 'orders'">
+        <Orders :orders="orders" :loading="ordersLoading" :error="ordersError" />
+      </template>
     </main>
   </div>
 </template>
@@ -261,76 +311,6 @@ h1 {
   padding: 10px 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 120ms ease, box-shadow 160ms ease, background 160ms ease;
-}
-
-.btn.primary {
-  background: #2563eb;
-  color: #fff;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
-}
-
-.btn.ghost {
-  background: #fff;
-  border-color: #e2e8f0;
-  color: #0f172a;
-}
-
-.btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
-}
-
-.hero-card {
-  align-self: center;
-  padding: 18px;
-  border: 1px dashed #cbd5e1;
-  border-radius: 14px;
-  background: #fff;
-  color: #475569;
-}
-
-.controls {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 14px;
-  padding: 18px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  background: #fff;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.field label {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: #475569;
-}
-
-input,
-select {
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
-  font-size: 14px;
-  transition: border-color 120ms ease, box-shadow 120ms ease;
-}
-
-input:focus,
-select:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-}
-
-.status {
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid #e2e8f0;
@@ -348,6 +328,100 @@ select:focus {
   border-color: #bbf7d0;
   background: #ecfdf3;
   color: #166534;
+}
+
+.link-btn {
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #2563eb;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease, box-shadow 120ms ease;
+}
+
+.link-btn:hover {
+  background: #f8fafc;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.link-btn.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+}
+
+.orders {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.orders-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.order-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+}
+
+.order-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.order-total {
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.item-row {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.thumb {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid #e2e8f0;
+}
+
+.item-meta .name {
+  margin: 0;
+  font-weight: 600;
+}
+
+.small {
+  font-size: 12px;
+}
+
+.line {
+  font-weight: 700;
+  color: #0f172a;
 }
 
 @media (max-width: 640px) {
