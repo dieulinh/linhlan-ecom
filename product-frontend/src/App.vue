@@ -8,6 +8,10 @@ const loading = ref(true)
 const error = ref('')
 const checkoutMessage = ref('')
 const checkoutError = ref('')
+const checkoutVisible = ref(false)
+const checkoutItem = ref(null)
+const checkoutQty = ref(1)
+const checkoutLoading = ref(false)
 const orders = ref([])
 const ordersLoading = ref(true)
 const ordersError = ref('')
@@ -68,9 +72,32 @@ const goToProducts = () => {
   activePage.value = 'products'
 }
 
-const instantCheckout = async (item) => {
+const startCheckout = (item) => {
+  checkoutItem.value = item
+  checkoutQty.value = 1
   checkoutMessage.value = ''
   checkoutError.value = ''
+  checkoutVisible.value = true
+}
+
+const closeCheckout = () => {
+  checkoutVisible.value = false
+}
+
+const incrementQty = () => {
+  checkoutQty.value += 1
+}
+
+const decrementQty = () => {
+  if (checkoutQty.value > 1) checkoutQty.value -= 1
+}
+
+const instantCheckout = async () => {
+  if (!checkoutItem.value) return
+
+  checkoutMessage.value = ''
+  checkoutError.value = ''
+  checkoutLoading.value = true
 
   try {
     const res = await fetch('http://localhost:8000/products/instant_checkout/', {
@@ -79,7 +106,7 @@ const instantCheckout = async (item) => {
         Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ product_id: item.id, quantity: 1 }),
+      body: JSON.stringify({ product_id: checkoutItem.value.id, quantity: checkoutQty.value }),
     })
 
     if (!res.ok) {
@@ -87,9 +114,13 @@ const instantCheckout = async (item) => {
     }
 
     const data = await res.json()
-    checkoutMessage.value = `Order ${data.order_id} placed for ${item.name}. Total $${(data.total / 100).toFixed(2)}`
+    checkoutMessage.value = `Order ${data.order_id} placed for ${checkoutItem.value.name}. Total $${(data.total / 100).toFixed(2)}`
+    await loadOrders()
+    checkoutVisible.value = false
   } catch (err) {
     checkoutError.value = err?.message || 'Instant checkout failed.'
+  } finally {
+    checkoutLoading.value = false
   }
 }
 
@@ -204,7 +235,7 @@ onMounted(async () => {
 
         <div v-if="loading" class="status">Loading products…</div>
         <div v-else-if="error" class="status error">{{ error }}</div>
-        <Products v-else :items="filtered" @add="addToCart" @instant-checkout="instantCheckout" />
+        <Products v-else :items="filtered" @add="addToCart" @instant-checkout="startCheckout" />
 
         <div v-if="checkoutMessage" class="status success">{{ checkoutMessage }}</div>
         <div v-else-if="checkoutError" class="status error">{{ checkoutError }}</div>
@@ -213,6 +244,29 @@ onMounted(async () => {
       <template v-else-if="activePage === 'orders'">
         <Orders :orders="orders" :loading="ordersLoading" :error="ordersError" />
       </template>
+
+      <div v-if="checkoutVisible" class="checkout-overlay">
+        <div class="checkout-panel">
+          <button class="close" type="button" @click="closeCheckout">×</button>
+          <p class="eyebrow">Instant checkout</p>
+          <h3>{{ checkoutItem?.name }}</h3>
+          <p class="muted">${{ checkoutItem?.price.toFixed(2) }}</p>
+
+          <div class="quantity">
+            <button type="button" @click="decrementQty" :disabled="checkoutQty === 1">−</button>
+            <span>{{ checkoutQty }}</span>
+            <button type="button" @click="incrementQty">＋</button>
+          </div>
+
+          <p class="total">Total ${{ (checkoutItem?.price * checkoutQty).toFixed(2) }}</p>
+
+          <button class="btn primary wide" type="button" :disabled="checkoutLoading" @click="instantCheckout">
+            {{ checkoutLoading ? 'Processing…' : 'Place order' }}
+          </button>
+
+          <div v-if="checkoutError" class="status error">{{ checkoutError }}</div>
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -352,6 +406,73 @@ h1 {
   color: #fff;
   border-color: #2563eb;
   box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+}
+
+.checkout-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 30;
+  padding: 20px;
+}
+
+.checkout-panel {
+  position: relative;
+  background: #fff;
+  width: min(420px, 100%);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checkout-panel .close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.quantity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.quantity button {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  cursor: pointer;
+}
+
+.quantity span {
+  min-width: 32px;
+  text-align: center;
+  font-weight: 700;
+}
+
+.total {
+  font-weight: 800;
+  font-size: 18px;
+}
+
+.btn.wide {
+  width: 100%;
+  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  text-align: center;
 }
 
 .orders {
