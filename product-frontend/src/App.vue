@@ -5,6 +5,8 @@ import Products from './components/Products.vue'
 const products = ref([])
 const loading = ref(true)
 const error = ref('')
+const checkoutMessage = ref('')
+const checkoutError = ref('')
 
 const search = ref('')
 const category = ref('all')
@@ -51,6 +53,31 @@ const cartTotal = computed(() => {
 const addToCart = (item) => {
   const current = cart.get(item.id) ?? 0
   cart.set(item.id, current + 1)
+}
+
+const instantCheckout = async (item) => {
+  checkoutMessage.value = ''
+  checkoutError.value = ''
+
+  try {
+    const res = await fetch('http://localhost:8000/products/instant_checkout/', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ product_id: item.id, quantity: 1 }),
+    })
+
+    if (!res.ok) {
+      throw new Error(`Checkout failed: ${res.status}`)
+    }
+
+    const data = await res.json()
+    checkoutMessage.value = `Order ${data.order_id} placed for ${item.name}. Total $${(data.total / 100).toFixed(2)}`
+  } catch (err) {
+    checkoutError.value = err?.message || 'Instant checkout failed.'
+  }
 }
 
 const loadProducts = async () => {
@@ -132,7 +159,10 @@ onMounted(loadProducts)
 
       <div v-if="loading" class="status">Loading products…</div>
       <div v-else-if="error" class="status error">{{ error }}</div>
-      <Products v-else :items="filtered" @add="addToCart" />
+      <Products v-else :items="filtered" @add="addToCart" @instant-checkout="instantCheckout" />
+
+      <div v-if="checkoutMessage" class="status success">{{ checkoutMessage }}</div>
+      <div v-else-if="checkoutError" class="status error">{{ checkoutError }}</div>
     </main>
   </div>
 </template>
@@ -298,6 +328,26 @@ select:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.status {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+}
+
+.status.error {
+  border-color: #fca5a5;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.status.success {
+  border-color: #bbf7d0;
+  background: #ecfdf3;
+  color: #166534;
 }
 
 @media (max-width: 640px) {

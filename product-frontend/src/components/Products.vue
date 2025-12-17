@@ -8,12 +8,16 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['add'])
+const emit = defineEmits(['add', 'instant-checkout'])
 
 const hasResults = computed(() => props.items && props.items.length > 0)
 
 const handleAdd = (item) => {
   emit('add', item)
+}
+const handleInstantCheckout = (item) => {
+  // For simplicity, just add to cart for now
+  emit('instant-checkout', item)
 }
 </script>
 
@@ -29,18 +33,21 @@ const handleAdd = (item) => {
 
     <div v-if="hasResults" class="grid">
       <article v-for="item in props.items" :key="item.id" class="card">
-        <div class="image" :style="{ backgroundImage: `url(${item.image})` }">
-          <span class="pill">{{ item.category }}</span>
+        <div class="image" :style="{ backgroundImage: `url(${item.image_url})` }">
+          <span class="pill">{{ item.category || 'General' }}</span>
         </div>
         <div class="content">
           <div class="title-row">
             <h3>{{ item.name }}</h3>
             <span class="price">${{ item.price.toFixed(2) }}</span>
           </div>
-          <p class="muted">{{ item.description }}</p>
+          <p class="muted">{{ item.description || 'No description provided.' }}</p>
           <div class="meta">
-            <span class="rating">★ {{ item.rating }}</span>
-            <button class="add" type="button" @click="handleAdd(item)">Add to cart</button>
+            <span class="rating">★ {{ item.rating ?? '—' }}</span>
+            <div class="actions">
+              <button class="add ghost" type="button" @click="handleAdd(item)">Add to cart</button>
+              <button class="add" type="button" @click="handleInstantCheckout(item)">Buy now</button>
+            </div>
           </div>
         </div>
       </article>
@@ -163,6 +170,11 @@ h3 {
   color: #f59e0b;
 }
 
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
 .add {
   border: 1px solid #2563eb;
   background: #2563eb;
@@ -172,6 +184,11 @@ h3 {
   font-weight: 600;
   cursor: pointer;
   transition: background 120ms ease, transform 120ms ease;
+}
+
+.add.ghost {
+  background: #fff;
+  color: #2563eb;
 }
 
 .add:hover {
