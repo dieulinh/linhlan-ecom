@@ -1,79 +1,30 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import Products from './components/Products.vue'
 
-const products = reactive([
-  {
-    id: 1,
-    name: 'Minimal Desk Lamp',
-    category: 'Home',
-    price: 48,
-    rating: 4.6,
-    image:
-      'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
-    description: 'Soft glow lamp with adjustable neck for late-night focus.',
-  },
-  {
-    id: 2,
-    name: 'Cotton Crew Tee',
-    category: 'Apparel',
-    price: 22,
-    rating: 4.2,
-    image:
-      'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80',
-    description: 'Mid-weight, pre-shrunk cotton tee that keeps its shape.',
-  },
-  {
-    id: 3,
-    name: 'Wireless Earbuds',
-    category: 'Electronics',
-    price: 129,
-    rating: 4.8,
-    image:
-      'https://images.unsplash.com/photo-1585386959984-a4155224a1ad?auto=format&fit=crop&w=800&q=80',
-    description: 'Clear sound, long battery life, and pocketable charging case.',
-  },
-  {
-    id: 4,
-    name: 'Stoneware Mug',
-    category: 'Home',
-    price: 18,
-    rating: 4.4,
-    image:
-      'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80',
-    description: 'Hand-glazed mug with a wide handle and matte finish.',
-  },
-  {
-    id: 5,
-    name: 'Canvas Backpack',
-    category: 'Apparel',
-    price: 78,
-    rating: 4.5,
-    image:
-      'https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=800&q=80',
-    description: 'Everyday carry with padded laptop sleeve and water bottle slot.',
-  },
-])
+const products = ref([])
+const loading = ref(true)
+const error = ref('')
 
 const search = ref('')
 const category = ref('all')
 const sort = ref('featured')
 const cart = reactive(new Map())
 
-const categories = computed(() => ['all', ...new Set(products.map((p) => p.category))])
+const categories = computed(() => ['all', ...new Set(products.value.map((p) => p.category || 'Uncategorized'))])
 
 const filtered = computed(() => {
   const term = search.value.trim().toLowerCase()
   const byCategory = (item) => category.value === 'all' || item.category === category.value
   const bySearch = (item) =>
-    !term || item.name.toLowerCase().includes(term) || item.description.toLowerCase().includes(term)
+    !term || item.name.toLowerCase().includes(term) || (item.description || '').toLowerCase().includes(term)
 
-  const sorted = [...products]
+  const sorted = [...products.value]
     .filter((item) => byCategory(item) && bySearch(item))
     .sort((a, b) => {
       if (sort.value === 'price-asc') return a.price - b.price
       if (sort.value === 'price-desc') return b.price - a.price
-      if (sort.value === 'rating') return b.rating - a.rating
+      if (sort.value === 'rating') return (b.rating || 0) - (a.rating || 0)
       return a.id - b.id
     })
 
@@ -91,7 +42,7 @@ const cartCount = computed(() => {
 const cartTotal = computed(() => {
   let total = 0
   cart.forEach((qty, id) => {
-    const item = products.find((p) => p.id === id)
+    const item = products.value.find((p) => p.id === id)
     if (item) total += qty * item.price
   })
   return total
@@ -101,6 +52,31 @@ const addToCart = (item) => {
   const current = cart.get(item.id) ?? 0
   cart.set(item.id, current + 1)
 }
+
+const loadProducts = async () => {
+  loading.value = true
+  error.value = ''
+  try {
+    const res = await fetch('http://localhost:8000/products/list/', {
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+
+    if (!res.ok) {
+      throw new Error(`Request failed with status ${res.status}`)
+    }
+
+    const data = await res.json()
+    products.value = Array.isArray(data?.results) ? data.results : []
+  } catch (err) {
+    error.value = err?.message || 'Unable to load products.'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadProducts)
 </script>
 
 <template>
@@ -154,7 +130,9 @@ const addToCart = (item) => {
         </div>
       </section>
 
-      <Products :items="filtered" @add="addToCart" />
+      <div v-if="loading" class="status">Loading products…</div>
+      <div v-else-if="error" class="status error">{{ error }}</div>
+      <Products v-else :items="filtered" @add="addToCart" />
     </main>
   </div>
 </template>
