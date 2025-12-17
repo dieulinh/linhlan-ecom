@@ -6,10 +6,12 @@ from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from .forms import ProductForm
 from django.contrib.auth.models import User
+from django.conf import settings
 import os
 import boto3
 import uuid
 import json
+import stripe
 from django.db.models import Prefetch
 # Create your views here.
 def retrieve_sqs_messages(request):
@@ -155,6 +157,45 @@ def details(request,product_id):
   product = Product.objects.get(pk=product_id)
 
   return render(request, "products/product_details.html", {'product': product})
+
+
+def product_detail_json(request, product_id):
+  accept_header = request.headers.get('Accept', '')
+  wants_json = 'application/json' in accept_header or '*/*' in accept_header or not accept_header
+
+  if not wants_json:
+    return JsonResponse({'detail': 'Not Acceptable. Send Accept: application/json.'}, status=406)
+
+  try:
+    product = Product.objects.get(pk=product_id)
+  except Product.DoesNotExist:
+    return JsonResponse({'detail': 'Product not found'}, status=404)
+
+  others = Product.objects.exclude(pk=product_id).order_by('-timestamp')[:5]
+
+  def brief(p):
+    return {
+      'id': p.id,
+      'name': p.name,
+      'price': float(p.price),
+      'image_url': p.image_url,
+    }
+
+  data = {
+    'id': product.id,
+    'name': product.name,
+    'handle': product.handle,
+    'price': float(product.price),
+    'og_price': float(product.og_price),
+    'stripe_price': product.stripe_price,
+    'stock': product.stock,
+    'image_url': product.image_url,
+    'updated_at': product.updated.isoformat(),
+    'created_at': product.timestamp.isoformat(),
+    'recommendations': [brief(p) for p in others],
+  }
+
+  return JsonResponse(data, json_dumps_params={'ensure_ascii': False})
 def add_to_cart(request, product_id):
   product = Product.objects.get(pk=product_id)
   # Assume the cart is stored in the session as a list of product IDs
@@ -217,7 +258,39 @@ def instant_checkout(request):
   
   order = Order.objects.create(cart_id=cart, total=total)
 
-  return JsonResponse({
+  stripe_key = os.environ.get('STRIPE_SECRET_KEY') or getattr(settings, 'STRIPE_SECRET_KEY', None)
+  session = None
+
+  if stripe_key:
+    stripe.api_key = stripe_key
+    try:
+      session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        mode='payment',
+        line_items=[
+          {
+            'price_data': {
+              'currency': 'usd',
+              'unit_amount': total // quantity,
+              'product_data': {
+                'name': product.name,
+                'images': [product.image_url],
+              },
+            },
+            'quantity': quantity,
+          }
+        ],
+        success_url='http://localhost:5173/?status=success&session_id={CHECKOUT_SESSION_ID}',
+        cancel_url='http://localhost:5173/?status=cancel',
+      )
+    except Exception as exc:
+      session = None
+      # Do not fail the request; surface error for the client to handle.
+      checkout_error = str(exc)
+  else:
+    checkout_error = 'Stripe secret key not configured.'
+
+  response_data = {
     'order_id': order.id,
     'cart_id': cart.id,
     'cart_item_id': cart_item.id,
@@ -231,7 +304,15 @@ def instant_checkout(request):
       'stripe_price': float(product.price) * 100,
       'image_url': product.image_url,
     },
-  }, status=201)
+  }
+
+  if session:
+    response_data['stripe_session_id'] = session.id
+    response_data['stripe_checkout_url'] = session.url
+  else:
+    response_data['stripe_error'] = checkout_error
+
+  return JsonResponse(response_data, status=201)
 
 class ProductList(ListView):
   model = Product
@@ -246,7 +327,18 @@ class ProductList(ListView):
 
     products = context['object_list']
 
+    sorted_products = sorted(products, key=lambda p: p.timestamp, reverse=True)
+
+    def serialize_brief(product):
+      return {
+        'id': product.id,
+        'name': product.name,
+        'price': float(product.price),
+        'image_url': product.image_url,
+      }
+
     def serialize(product):
+      recommendations = [serialize_brief(p) for p in sorted_products if p.id != product.id][:3]
       return {
         'id': product.id,
         'name': product.name,
@@ -258,6 +350,7 @@ class ProductList(ListView):
         'image_url': product.image_url,
         'updated_at': product.updated.isoformat(),
         'created_at': product.timestamp.isoformat(),
+        'recommendations': recommendations,
       }
 
     payload = {

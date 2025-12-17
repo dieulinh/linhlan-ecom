@@ -7,6 +7,7 @@ urlpatterns = [
   path('new_product/', views.create_product, name='newproduct'),
   path('list/', views.ProductList.as_view(), name='productlist'),
   path('<int:product_id>/', views.details, name='detail'),
+  path('<int:product_id>/json/', views.product_detail_json, name='product_detail_json'),
   path('view_cart/', views.view_cart, name='view_cart'),
   path('checkout/', views.checkout, name='checkout'),
   path('list_s3/', views.list_s3, name='list_s3'),
