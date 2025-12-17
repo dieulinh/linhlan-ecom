@@ -8,7 +8,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['add', 'instant-checkout'])
+const emit = defineEmits(['add', 'instant-checkout', 'view'])
 
 const hasResults = computed(() => props.items && props.items.length > 0)
 
@@ -18,6 +18,9 @@ const handleAdd = (item) => {
 const handleInstantCheckout = (item) => {
   // For simplicity, just add to cart for now
   emit('instant-checkout', item)
+}
+const handleView = (item) => {
+  emit('view', item)
 }
 </script>
 
@@ -32,7 +35,7 @@ const handleInstantCheckout = (item) => {
     </header>
 
     <div v-if="hasResults" class="grid">
-      <article v-for="item in props.items" :key="item.id" class="card">
+      <article v-for="item in props.items" :key="item.id" class="card" @click="handleView(item)">
         <div class="image" :style="{ backgroundImage: `url(${item.image_url})` }">
           <span class="pill">{{ item.category || 'General' }}</span>
         </div>

@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import Products from './components/Products.vue'
 import Orders from './components/Orders.vue'
+import ProductDetail from './components/ProductDetail.vue'
 
 const products = ref([])
 const loading = ref(true)
@@ -16,6 +17,9 @@ const orders = ref([])
 const ordersLoading = ref(true)
 const ordersError = ref('')
 const activePage = ref('products')
+const productDetail = ref(null)
+const productDetailLoading = ref(false)
+const productDetailError = ref('')
 
 const search = ref('')
 const category = ref('all')
@@ -70,6 +74,29 @@ const goToOrders = () => {
 
 const goToProducts = () => {
   activePage.value = 'products'
+}
+
+const viewProduct = async (item) => {
+  productDetail.value = null
+  productDetailError.value = ''
+  activePage.value = 'product-detail'
+  productDetailLoading.value = true
+  try {
+    const res = await fetch(`http://localhost:8000/products/${item.id}/json/`, {
+      headers: {
+        Accept: 'application/json',
+      },
+    })
+
+    if (!res.ok) throw new Error(`Product request failed: ${res.status}`)
+
+    const data = await res.json()
+    productDetail.value = data
+  } catch (err) {
+    productDetailError.value = err?.message || 'Unable to load product.'
+  } finally {
+    productDetailLoading.value = false
+  }
 }
 
 const startCheckout = (item) => {
@@ -235,7 +262,7 @@ onMounted(async () => {
 
         <div v-if="loading" class="status">Loading products…</div>
         <div v-else-if="error" class="status error">{{ error }}</div>
-        <Products v-else :items="filtered" @add="addToCart" @instant-checkout="startCheckout" />
+        <Products v-else :items="filtered" @add="addToCart" @instant-checkout="startCheckout" @view="viewProduct" />
 
         <div v-if="checkoutMessage" class="status success">{{ checkoutMessage }}</div>
         <div v-else-if="checkoutError" class="status error">{{ checkoutError }}</div>
@@ -243,6 +270,16 @@ onMounted(async () => {
 
       <template v-else-if="activePage === 'orders'">
         <Orders :orders="orders" :loading="ordersLoading" :error="ordersError" />
+      </template>
+
+      <template v-else-if="activePage === 'product-detail'">
+        <ProductDetail
+          :product="productDetail"
+          :loading="productDetailLoading"
+          :error="productDetailError"
+          @back="goToProducts"
+          @buy="startCheckout"
+        />
       </template>
 
       <div v-if="checkoutVisible" class="checkout-overlay">
