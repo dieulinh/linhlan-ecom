@@ -1,30 +1,336 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
+import { computed, reactive, ref } from 'vue'
+import Products from './components/Products.vue'
+
+const products = reactive([
+  {
+    id: 1,
+    name: 'Minimal Desk Lamp',
+    category: 'Home',
+    price: 48,
+    rating: 4.6,
+    image:
+      'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
+    description: 'Soft glow lamp with adjustable neck for late-night focus.',
+  },
+  {
+    id: 2,
+    name: 'Cotton Crew Tee',
+    category: 'Apparel',
+    price: 22,
+    rating: 4.2,
+    image:
+      'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80',
+    description: 'Mid-weight, pre-shrunk cotton tee that keeps its shape.',
+  },
+  {
+    id: 3,
+    name: 'Wireless Earbuds',
+    category: 'Electronics',
+    price: 129,
+    rating: 4.8,
+    image:
+      'https://images.unsplash.com/photo-1585386959984-a4155224a1ad?auto=format&fit=crop&w=800&q=80',
+    description: 'Clear sound, long battery life, and pocketable charging case.',
+  },
+  {
+    id: 4,
+    name: 'Stoneware Mug',
+    category: 'Home',
+    price: 18,
+    rating: 4.4,
+    image:
+      'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80',
+    description: 'Hand-glazed mug with a wide handle and matte finish.',
+  },
+  {
+    id: 5,
+    name: 'Canvas Backpack',
+    category: 'Apparel',
+    price: 78,
+    rating: 4.5,
+    image:
+      'https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=800&q=80',
+    description: 'Everyday carry with padded laptop sleeve and water bottle slot.',
+  },
+])
+
+const search = ref('')
+const category = ref('all')
+const sort = ref('featured')
+const cart = reactive(new Map())
+
+const categories = computed(() => ['all', ...new Set(products.map((p) => p.category))])
+
+const filtered = computed(() => {
+  const term = search.value.trim().toLowerCase()
+  const byCategory = (item) => category.value === 'all' || item.category === category.value
+  const bySearch = (item) =>
+    !term || item.name.toLowerCase().includes(term) || item.description.toLowerCase().includes(term)
+
+  const sorted = [...products]
+    .filter((item) => byCategory(item) && bySearch(item))
+    .sort((a, b) => {
+      if (sort.value === 'price-asc') return a.price - b.price
+      if (sort.value === 'price-desc') return b.price - a.price
+      if (sort.value === 'rating') return b.rating - a.rating
+      return a.id - b.id
+    })
+
+  return sorted
+})
+
+const cartCount = computed(() => {
+  let total = 0
+  cart.forEach((qty) => {
+    total += qty
+  })
+  return total
+})
+
+const cartTotal = computed(() => {
+  let total = 0
+  cart.forEach((qty, id) => {
+    const item = products.find((p) => p.id === id)
+    if (item) total += qty * item.price
+  })
+  return total
+})
+
+const addToCart = (item) => {
+  const current = cart.get(item.id) ?? 0
+  cart.set(item.id, current + 1)
+}
 </script>
 
 <template>
-  <div>
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand">LinhLan Shop</div>
+      <div class="cart">
+        <span class="cart-count">{{ cartCount }} items</span>
+        <span class="cart-total">${{ cartTotal.toFixed(2) }}</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div>
+          <p class="eyebrow">New arrivals</p>
+          <h1>Curated picks for everyday living</h1>
+          <p class="lede">
+            Explore a handful of products with clean design, quality materials, and prices that make sense.
+          </p>
+          <div class="actions">
+            <button class="btn primary">Shop featured</button>
+            <button class="btn ghost">View all</button>
+          </div>
+        </div>
+        <div class="hero-card">
+          <p class="muted">Fast shipping · 30-day returns</p>
+          <p class="muted">Secure checkout · Chat support</p>
+        </div>
+      </section>
+
+      <section class="controls">
+        <div class="field">
+          <label>Search</label>
+          <input v-model="search" type="search" placeholder="Find products" />
+        </div>
+        <div class="field">
+          <label>Category</label>
+          <select v-model="category">
+            <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Sort</label>
+          <select v-model="sort">
+            <option value="featured">Featured</option>
+            <option value="price-asc">Price: Low to High</option>
+            <option value="price-desc">Price: High to Low</option>
+            <option value="rating">Top Rated</option>
+          </select>
+        </div>
+      </section>
+
+      <Products :items="filtered" @add="addToCart" />
+    </main>
   </div>
-  <HelloWorld msg="Vite + Vue" />
 </template>
 
 <style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+.page {
+  min-height: 100vh;
+  background: radial-gradient(circle at 20% 20%, #f5f8ff, #f7fbff 30%, #fdfdfd 60%);
+  color: #0f172a;
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 32px;
+  position: sticky;
+  top: 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e2e8f0;
+  z-index: 10;
 }
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+
+.brand {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.cart {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  font-weight: 600;
+}
+
+.cart-count {
+  color: #0f172a;
+}
+
+.cart-total {
+  color: #2563eb;
+}
+
+main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 18px;
+  background: linear-gradient(135deg, #e9efff, #f8fbff 50%, #ffffff);
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2563eb;
+  margin: 0 0 8px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 32px;
+  line-height: 1.15;
+}
+
+.lede {
+  margin: 0 0 16px;
+  color: #475569;
+  max-width: 54ch;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.25);
+}
+
+.btn.ghost {
+  background: #fff;
+  border-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+}
+
+.hero-card {
+  align-self: center;
+  padding: 18px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+  background: #fff;
+  color: #475569;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #475569;
+}
+
+input,
+select {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  font-size: 14px;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+@media (max-width: 640px) {
+  .topbar {
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  main {
+    padding: 20px 16px 48px;
+  }
 }
 </style>
