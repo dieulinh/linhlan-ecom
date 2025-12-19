@@ -54,8 +54,15 @@ const closeCart = () => {
               <p class="name">{{ item.name }}</p>
               <p class="muted">${{ item.price.toFixed(2) }}</p>
             </div>
-            <div class="qty">×{{ item.qty }}</div>
-            <div class="line">${{ (item.qty * item.price).toFixed(2) }}</div>
+            <div class="qty-controls">
+              <button class="qty-btn" type="button" @click="cart.decrement(item.id)" :disabled="item.qty === 1">−</button>
+              <span class="qty">{{ item.qty }}</span>
+              <button class="qty-btn" type="button" @click="cart.increment(item.id)">＋</button>
+            </div>
+            <div class="line">${{ item.lineTotal.toFixed(2) }}</div>
+            <button class="delete-btn" type="button" @click="cart.removeItem(item.id)" aria-label="Remove">
+              ×
+            </button>
           </article>
         </div>
         <div v-else class="status">Your cart is empty.</div>
@@ -361,7 +368,7 @@ h1 {
 
 .cart-row {
   display: grid;
-  grid-template-columns: 56px 1fr auto auto;
+  grid-template-columns: 56px 1fr auto auto 36px;
   gap: 10px;
   align-items: center;
   border: 1px solid #e2e8f0;
@@ -389,9 +396,58 @@ h1 {
   color: #0f172a;
 }
 
+.qty-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 4px 6px;
+}
+
+.qty-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid #dbeafe;
+  background: #fff;
+  color: #2563eb;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.qty-btn:hover:not(:disabled) {
+  background: #eff6ff;
+  transform: translateY(-1px);
+}
+
+.qty-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .line {
   font-weight: 700;
   color: #2563eb;
+}
+
+.delete-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid #fee2e2;
+  background: #fff1f2;
+  color: #b91c1c;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.delete-btn:hover {
+  background: #fecdd3;
+  transform: translateY(-1px);
 }
 
 .checkout-overlay {

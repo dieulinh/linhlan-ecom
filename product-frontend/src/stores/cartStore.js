@@ -28,6 +28,7 @@ const cartItems = computed(() => {
     price: entry.price || 0,
     name: entry.name || 'Item',
     image_url: entry.image_url || '',
+    lineTotal: (entry.qty || 0) * (entry.price || 0),
   }))
 })
 
@@ -47,10 +48,42 @@ const addToCart = (product) => {
   })
 }
 
+const setQuantity = (id, quantity) => {
+  if (typeof id === 'undefined') return
+  const numericQty = Math.max(0, Number(quantity) || 0)
+  const existing = state.items.get(id)
+  if (!existing) return
+  if (numericQty === 0) {
+    state.items.delete(id)
+    return
+  }
+  state.items.set(id, { ...existing, qty: numericQty })
+}
+
+const increment = (id) => {
+  const existing = state.items.get(id)
+  if (!existing) return
+  setQuantity(id, (existing.qty || 0) + 1)
+}
+
+const decrement = (id) => {
+  const existing = state.items.get(id)
+  if (!existing) return
+  setQuantity(id, (existing.qty || 0) - 1)
+}
+
+const removeItem = (id) => {
+  if (state.items.has(id)) state.items.delete(id)
+}
+
 export const useCartStore = () => ({
   state,
   cartCount,
   cartTotal,
   cartItems,
   addToCart,
+  setQuantity,
+  increment,
+  decrement,
+  removeItem,
 })
