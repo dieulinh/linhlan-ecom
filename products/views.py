@@ -13,6 +13,7 @@ import uuid
 import json
 import stripe
 from django.db.models import Prefetch
+from django.views.decorators.csrf import csrf_exempt
 # Create your views here.
 def retrieve_sqs_messages(request):
   print('RETRIEVE_MESSAGE')
@@ -311,6 +312,102 @@ def instant_checkout(request):
     response_data['stripe_checkout_url'] = session.url
   else:
     response_data['stripe_error'] = checkout_error
+
+  return JsonResponse(response_data, status=201)
+
+
+@csrf_exempt
+@require_POST
+def cart_checkout(request):
+  try:
+    payload = json.loads(request.body or '{}') if request.body else {}
+  except json.JSONDecodeError:
+    payload = {}
+
+  items = payload.get('items') or []
+  if not items:
+    return JsonResponse({'detail': 'items is required'}, status=400)
+
+  # Normalize items: list of {product_id, quantity}
+  normalized = []
+  for item in items:
+    pid = item.get('product_id') if isinstance(item, dict) else None
+    qty = int(item.get('quantity') or 1) if isinstance(item, dict) else 1
+    if pid:
+      normalized.append({'product_id': pid, 'quantity': max(qty, 1)})
+
+  if not normalized:
+    return JsonResponse({'detail': 'No valid items provided'}, status=400)
+
+  products = Product.objects.in_bulk([i['product_id'] for i in normalized])
+  missing = [i['product_id'] for i in normalized if i['product_id'] not in products]
+  if missing:
+    return JsonResponse({'detail': f"Products not found: {missing}"}, status=404)
+
+  user = User.objects.first()
+  cart = Cart.objects.create(user=user)
+
+  total = 0
+  for item in normalized:
+    product = products[item['product_id']]
+    qty = item['quantity']
+    CartItem.objects.create(quantity=qty, product_id=product, cart_it=cart)
+    unit_amount = int(product.price * 100)
+    total += unit_amount * qty
+
+  order = Order.objects.create(cart_id=cart, total=total)
+
+  stripe_key = os.environ.get('STRIPE_API_SECRET_KEY') or getattr(settings, 'STRIPE_SECRET_KEY', None)
+  session = None
+  checkout_error = None
+
+  if stripe_key:
+    stripe.api_key = stripe_key
+    try:
+      line_items = []
+      for item in normalized:
+        product = products[item['product_id']]
+        unit_amount = int(product.price * 100)
+        line_items.append(
+          {
+            'price_data': {
+              'currency': 'usd',
+              'unit_amount': unit_amount,
+              'product_data': {
+                'name': product.name,
+                'images': [product.image_url],
+              },
+            },
+            'quantity': item['quantity'],
+          }
+        )
+
+      session = stripe.checkout.Session.create(
+        payment_method_types=['card'],
+        mode='payment',
+        line_items=line_items,
+        success_url='http://localhost:5173/?status=success&session_id={CHECKOUT_SESSION_ID}',
+        cancel_url='http://localhost:5173/?status=cancel',
+      )
+    except Exception as exc:
+      session = None
+      checkout_error = str(exc)
+  else:
+    checkout_error = 'Stripe secret key not configured.'
+
+  response_data = {
+    'order_id': order.id,
+    'cart_id': cart.id,
+    'total': total,
+    'currency': 'usd',
+    'items': normalized,
+  }
+
+  if session:
+    response_data['stripe_session_id'] = session.id
+    response_data['stripe_checkout_url'] = session.url
+  else:
+    response_data['stripe_error'] = checkout_error or 'Stripe session not created.'
 
   return JsonResponse(response_data, status=201)
 
