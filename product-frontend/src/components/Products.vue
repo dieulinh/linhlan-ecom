@@ -38,21 +38,24 @@ const handleView = (item) => {
         <div class="image" :style="{ backgroundImage: `url(${item.image_url})` }">
           <span class="pill">{{ item.category || 'General' }}</span>
         </div>
-        <div class="content">
-          <div class="title-row">
-            <h3>{{ item.name }}</h3>
-            <span class="price">${{ item.price.toFixed(2) }}</span>
-          </div>
-          <p class="muted">{{ item.description || 'No description provided.' }}</p>
-          <div class="meta">
-            <span class="rating">★ {{ item.rating ?? '—' }}</span>
-            <div class="actions">
-              <button class="add ghost" type="button" @click="handleView(item)">View</button>
-              <button class="add ghost" type="button" @click="handleAdd(item)">Add to cart</button>
-              <button class="add" type="button" @click="handleInstantCheckout(item)">Buy now</button>
+        
+          
+          <div class="content">
+            <div class="title-row">
+              <router-link :to="{ name: 'product-detail', params: { id: item.id } }" class="sr-only product-name"><h3>{{ item.name }}</h3></router-link>
+              <span class="price">${{ item.price.toFixed(2) }}</span>
+            </div>
+            <p class="muted">{{ item.description || 'No description provided.' }}</p>
+            <div class="meta">
+              <span class="rating">★ {{ item.rating ?? '—' }}</span>
+              <div class="actions">
+                <button class="add ghost" type="button" @click="handleView(item)">View</button>
+                <button class="add ghost" type="button" @click="handleAdd(item)">Add to cart</button>
+                <button class="add" type="button" @click="handleInstantCheckout(item)">Buy now</button>
+              </div>
             </div>
           </div>
-        </div>
+        
       </article>
     </div>
 

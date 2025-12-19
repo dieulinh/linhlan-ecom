@@ -23,3 +23,7 @@ body {
 a {
   color: inherit;
 }
+.product-name,
+.router-link-active * {
+  text-decoration: none;
+}

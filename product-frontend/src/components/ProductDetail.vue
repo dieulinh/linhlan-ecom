@@ -14,10 +14,14 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['back', 'buy'])
+const emit = defineEmits(['back', 'buy', 'add'])
 
 const handleBuy = () => {
   if (props.product) emit('buy', props.product)
+}
+
+const handleAdd = () => {
+  if (props.product) emit('add', props.product)
 }
 </script>
 
@@ -36,6 +40,7 @@ const handleBuy = () => {
         <p class="price">${{ product.price.toFixed(2) }}</p>
         <p class="muted">Handle: {{ product.handle }}</p>
         <p class="muted">Stock: {{ product.stock }}</p>
+        <button class="btn primary" type="button" @click="handleAdd">Add to cart</button>
         <button class="btn primary" type="button" @click="handleBuy">Buy now</button>
       </div>
     </div>
