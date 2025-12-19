@@ -24,8 +24,16 @@ const closeCart = () => {
         <RouterLink class="link-btn" to="/orders">
           Orders
         </RouterLink>
-        <button v-if="cartCount > 0" class="badge" type="button" @click="toggleCart">
-          {{ cartCount }}
+        <button class="cart-chip" type="button" @click="toggleCart">
+          <span class="cart-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="21" r="1.4" />
+              <circle cx="19" cy="21" r="1.4" />
+              <path d="M3 4h2l1.4 9.2A1.2 1.2 0 0 0 7.6 14h9.6a1.2 1.2 0 0 0 1.2-1l1-6.5H5.2" />
+            </svg>
+          </span>
+          <span class="cart-label">Cart</span>
+          <span class="cart-count-pill" :class="{ empty: cartCount === 0 }">{{ cartCount }}</span>
         </button>
       </nav>
     </header>
@@ -205,21 +213,55 @@ h1 {
   gap: 10px;
 }
 
-.badge {
+.cart-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid #e2e8f0;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.cart-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.12);
+}
+
+.cart-icon {
+  width: 18px;
+  height: 18px;
+  color: #2563eb;
+  display: inline-flex;
+}
+
+.cart-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.cart-count-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  padding: 4px 10px;
-  margin-left: 8px;
+  min-width: 22px;
+  padding: 4px 8px;
   border-radius: 999px;
   background: #2563eb;
   color: #fff;
   font-size: 12px;
-  font-weight: 700;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cart-count-pill.empty {
+  background: #e2e8f0;
+  color: #475569;
 }
 
 .link-btn {
