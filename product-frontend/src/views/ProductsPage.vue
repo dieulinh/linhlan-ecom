@@ -1,9 +1,11 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Products from '../components/Products.vue'
+import { useCartStore } from '../stores/cartStore'
 
 const router = useRouter()
+const { addToCart } = useCartStore()
 
 const products = ref([])
 const loading = ref(true)
@@ -18,7 +20,6 @@ const checkoutError = ref('')
 const search = ref('')
 const category = ref('all')
 const sort = ref('featured')
-const cart = reactive(new Map())
 
 const categories = computed(() => ['all', ...new Set(products.value.map((p) => p.category || 'Uncategorized'))])
 
@@ -39,28 +40,6 @@ const filtered = computed(() => {
 
   return sorted
 })
-
-const cartCount = computed(() => {
-  let total = 0
-  cart.forEach((qty) => {
-    total += qty
-  })
-  return total
-})
-
-const cartTotal = computed(() => {
-  let total = 0
-  cart.forEach((qty, id) => {
-    const item = products.value.find((p) => p.id === id)
-    if (item) total += qty * item.price
-  })
-  return total
-})
-
-const addToCart = (item) => {
-  const current = cart.get(item.id) ?? 0
-  cart.set(item.id, current + 1)
-}
 
 const startCheckout = (item) => {
   checkoutItem.value = item
@@ -144,7 +123,7 @@ onMounted(loadProducts)
       </div>
       <div class="cart">
         <span class="cart-count">{{ cartCount }} items</span>
-        <span class="cart-total">${{ cartTotal.toFixed(2) }}</span>
+        <span class="cart-total">${{ cartTotal&&cartTotal.toFixed(2) }}</span>
       </div>
     </header>
 

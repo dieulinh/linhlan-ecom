@@ -2,6 +2,8 @@
 import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ProductDetail from '../components/ProductDetail.vue'
+import { useCartStore } from '../stores/cartStore'
+const { addToCart, cartCount, cartTotal } = useCartStore()
 
 const route = useRoute()
 const product = ref(null)
@@ -35,5 +37,5 @@ watch(
 </script>
 
 <template>
-  <ProductDetail :product="product" :loading="loading" :error="error" @back="$router.back()" />
+  <ProductDetail @add="addToCart" :product="product" :loading="loading" :error="error" @back="$router.back()" />
 </template>

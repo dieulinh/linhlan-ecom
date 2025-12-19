@@ -1,5 +1,8 @@
 <script setup>
 import { RouterLink, RouterView } from 'vue-router'
+import { useCartStore } from './stores/cartStore'
+
+const { cartCount } = useCartStore()
 </script>
 
 <template>
@@ -8,7 +11,11 @@ import { RouterLink, RouterView } from 'vue-router'
       <div class="brand">LinhLan Shop</div>
       <nav class="nav">
         <RouterLink class="link-btn" to="/">Products</RouterLink>
-        <RouterLink class="link-btn" to="/orders">Orders</RouterLink>
+        <RouterLink class="link-btn" to="/orders">
+          Orders
+          
+        </RouterLink>
+        <span v-if="cartCount > 0" class="badge">{{ cartCount }}</span>
       </nav>
     </header>
 
@@ -153,6 +160,20 @@ h1 {
 .nav {
   display: flex;
   gap: 10px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 2px 8px;
+  margin-left: 8px;
+  border-radius: 999px;
+  background: #2563eb;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .link-btn {
