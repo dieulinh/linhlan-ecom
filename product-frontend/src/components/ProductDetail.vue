@@ -40,8 +40,10 @@ const handleAdd = () => {
         <p class="price">${{ product.price.toFixed(2) }}</p>
         <p class="muted">Handle: {{ product.handle }}</p>
         <p class="muted">Stock: {{ product.stock }}</p>
-        <button class="btn primary" type="button" @click="handleAdd">Add to cart</button>
-        <button class="btn primary" type="button" @click="handleBuy">Buy now</button>
+        <div class="actions">
+          <button class="add ghost" type="button" @click="handleAdd">Add to cart</button>
+          <button class="btn primary" type="button" @click="handleBuy">Buy now</button>
+        </div>
       </div>
     </div>
 
@@ -51,7 +53,7 @@ const handleAdd = () => {
         <article v-for="rec in product.recommendations" :key="rec.id" class="rec-card">
           <div class="thumb" :style="{ backgroundImage: `url(${rec.image_url})` }"></div>
           <div>
-            <p class="name">{{ rec.name }}</p>
+            <p class="name"><router-link class="product-name" :to="{ name: 'product-detail', params: { id: rec.id } }">{{ rec.name }}</router-link></p>
             <p class="muted">${{ rec.price.toFixed(2) }}</p>
           </div>
         </article>
@@ -92,6 +94,25 @@ const handleAdd = () => {
   font-size: 24px;
   font-weight: 800;
   margin: 6px 0;
+}
+.actions {
+  display: flex;
+  gap: 8px;
+}
+.add {
+  border: 1px solid #2563eb;
+  background: #2563eb;
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, transform 120ms ease;
+}
+
+.add.ghost {
+  background: #fff;
+  color: #2563eb;
 }
 
 .btn.primary {

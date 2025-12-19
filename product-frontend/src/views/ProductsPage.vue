@@ -5,7 +5,8 @@ import Products from '../components/Products.vue'
 import { useCartStore } from '../stores/cartStore'
 
 const router = useRouter()
-const { addToCart } = useCartStore()
+const cart = useCartStore()
+const { addToCart, cartTotal } = cart
 
 const products = ref([])
 const loading = ref(true)
@@ -121,9 +122,9 @@ onMounted(loadProducts)
         <p class="muted">Fast shipping · 30-day returns</p>
         <p class="muted">Secure checkout · Chat support</p>
       </div>
-      <div class="cart">
-        <span class="cart-count">{{ cartCount }} items</span>
-        <span class="cart-total">${{ cartTotal&&cartTotal.toFixed(2) }}</span>
+      <div :v-if="cartTotal" class="cart">
+        <span class="cart-count">{{ cart.cartCount }} items</span>
+        <span class="cart-total">${{cartTotal?.toFixed(2) }}</span>
       </div>
     </header>
 
@@ -158,7 +159,7 @@ onMounted(loadProducts)
         <button class="close" type="button" @click="closeCheckout">×</button>
         <p class="eyebrow">Instant checkout</p>
         <h3>{{ checkoutItem?.name }}</h3>
-        <p class="muted">${{ checkoutItem?.price.toFixed(2) }}</p>
+        <p class="muted">${{ checkoutItem?.price?.toFixed(2) }}</p>
 
         <div class="quantity">
           <button type="button" @click="decrementQty" :disabled="checkoutQty === 1">−</button>
@@ -166,7 +167,7 @@ onMounted(loadProducts)
           <button type="button" @click="incrementQty">＋</button>
         </div>
 
-        <p class="total">Total ${{ (checkoutItem?.price * checkoutQty).toFixed(2) }}</p>
+        <p class="total">Total ${{ (checkoutItem?.price * checkoutQty)?.toFixed(2) }}</p>
 
         <button class="btn primary wide" type="button" :disabled="checkoutLoading" @click="instantCheckout">
           {{ checkoutLoading ? 'Processing…' : 'Place order' }}

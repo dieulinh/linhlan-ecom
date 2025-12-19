@@ -1,8 +1,18 @@
 <script setup>
+import { ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { useCartStore } from './stores/cartStore'
 
-const { cartCount } = useCartStore()
+const cart = useCartStore()
+const { cartCount, cartTotal, cartItems } = cart
+const showCart = ref(false)
+
+const toggleCart = () => {
+  showCart.value = !showCart.value
+}
+const closeCart = () => {
+  showCart.value = false
+}
 </script>
 
 <template>
@@ -13,11 +23,44 @@ const { cartCount } = useCartStore()
         <RouterLink class="link-btn" to="/">Products</RouterLink>
         <RouterLink class="link-btn" to="/orders">
           Orders
-          
         </RouterLink>
-        <span v-if="cartCount > 0" class="badge">{{ cartCount }}</span>
+        <button v-if="cartCount > 0" class="badge" type="button" @click="toggleCart">
+          {{ cartCount }}
+        </button>
       </nav>
     </header>
+
+    <div v-if="showCart" class="cart-overlay" @click.self="closeCart">
+      <div class="cart-panel">
+        <header class="cart-head">
+          <div>
+            <p class="eyebrow">Cart</p>
+            <h3>{{ cartCount }} items · ${{ cartTotal?.toFixed(2) }}</h3>
+          </div>
+          <button class="close" type="button" @click="closeCart">×</button>
+        </header>
+        <div v-if="cartItems.length" class="cart-list">
+          <article v-for="item in cartItems" :key="item.id" class="cart-row">
+            <div class="thumb" :style="{ backgroundImage: item.image_url ? `url(${item.image_url})` : '' }"></div>
+            <div class="cart-meta">
+              <p class="name">{{ item.name }}</p>
+              <p class="muted">${{ item.price.toFixed(2) }}</p>
+            </div>
+            <div class="qty">×{{ item.qty }}</div>
+            <div class="line">${{ (item.qty * item.price).toFixed(2) }}</div>
+          </article>
+        </div>
+        <div v-else class="status">Your cart is empty.</div>
+
+        <footer class="cart-footer">
+          <div class="cart-summary">
+            <span>Total</span>
+            <strong>${{ cartTotal?.toFixed(2) }}</strong>
+          </div>
+          <RouterLink class="checkout-btn" to="/orders" @click="closeCart">Checkout</RouterLink>
+        </footer>
+      </div>
+    </div>
 
     <main>
       <RouterView />
@@ -166,14 +209,17 @@ h1 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  padding: 2px 8px;
+  min-width: 24px;
+  padding: 4px 10px;
   margin-left: 8px;
   border-radius: 999px;
   background: #2563eb;
   color: #fff;
   font-size: 12px;
   font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
 }
 
 .link-btn {
@@ -199,6 +245,111 @@ h1 {
   color: #fff;
   border-color: #2563eb;
   box-shadow: 0 8px 18px rgba(37, 99, 235, 0.2);
+}
+
+.cart-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 24px;
+  z-index: 40;
+}
+
+.cart-panel {
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 22px 50px rgba(15, 23, 42, 0.24);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cart-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.cart-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cart-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  gap: 12px;
+}
+
+.cart-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.checkout-btn {
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 10px 14px;
+  background: #2563eb;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.checkout-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.3);
+}
+
+.cart-row {
+  display: grid;
+  grid-template-columns: 56px 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px;
+  background: #fff;
+}
+
+.cart-row .thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background-size: cover;
+  background-position: center;
+  border: 1px solid #e2e8f0;
+}
+
+.cart-meta .name {
+  margin: 0;
+  font-weight: 700;
+}
+
+.qty {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.line {
+  font-weight: 700;
+  color: #2563eb;
 }
 
 .checkout-overlay {
