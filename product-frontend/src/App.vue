@@ -6,12 +6,46 @@ import { useCartStore } from './stores/cartStore'
 const cart = useCartStore()
 const { cartCount, cartTotal, cartItems } = cart
 const showCart = ref(false)
+const checkoutLoading = ref(false)
+const checkoutError = ref('')
 
 const toggleCart = () => {
   showCart.value = !showCart.value
 }
 const closeCart = () => {
   showCart.value = false
+}
+
+const checkoutCart = async () => {
+  const items = cartItems.value || []
+  if (!items.length) return
+  checkoutError.value = ''
+  checkoutLoading.value = true
+  try {
+    const res = await fetch('http://localhost:8000/products/cart_checkout/', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        items: items.map((item) => ({ product_id: item.id, quantity: item.qty })),
+      }),
+    })
+    const data = await res.json()
+    if (!res.ok) throw new Error(data?.detail || `Checkout failed: ${res.status}`)
+
+    if (data?.stripe_checkout_url) {
+      window.location.href = data.stripe_checkout_url
+      return
+    }
+
+    checkoutError.value = data?.stripe_error || 'Unable to start checkout.'
+  } catch (err) {
+    checkoutError.value = err?.message || 'Checkout failed.'
+  } finally {
+    checkoutLoading.value = false
+  }
 }
 </script>
 
@@ -72,8 +106,17 @@ const closeCart = () => {
             <span>Total</span>
             <strong>${{ cartTotal?.toFixed(2) }}</strong>
           </div>
-          <RouterLink class="checkout-btn" to="/orders" @click="closeCart">Checkout</RouterLink>
+          <button
+            class="checkout-btn"
+            type="button"
+            :disabled="checkoutLoading || !cartItems.length"
+            @click="checkoutCart"
+          >
+            {{ checkoutLoading ? 'Redirecting…' : 'Checkout' }}
+          </button>
         </footer>
+
+        <div v-if="checkoutError" class="status error">{{ checkoutError }}</div>
       </div>
     </div>
 
@@ -364,6 +407,13 @@ h1 {
 .checkout-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 14px 28px rgba(37, 99, 235, 0.3);
+}
+
+.checkout-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .cart-row {
