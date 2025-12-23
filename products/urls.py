@@ -17,4 +17,5 @@ urlpatterns = [
   path('instant_checkout/', views.instant_checkout, name='instant_checkout'),
   path('cart_checkout/', views.cart_checkout, name='cart_checkout'),
   path('orders/', views.order_list, name='order_list'),
+  path('orders/<int:order_id>/address/', views.save_order_address, name='save_order_address'),
 ]

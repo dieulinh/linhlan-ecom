@@ -1,7 +1,8 @@
+import pdb
 from django.shortcuts import render
 from django.http import JsonResponse,HttpResponse
 from django.views.generic import ListView
-from .models import Product, CartItem, Cart,Order
+from .models import Product, CartItem, Cart,Order, ShippingAddress
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from .forms import ProductForm
@@ -197,6 +198,7 @@ def product_detail_json(request, product_id):
   }
 
   return JsonResponse(data, json_dumps_params={'ensure_ascii': False})
+
 def add_to_cart(request, product_id):
   product = Product.objects.get(pk=product_id)
   # Assume the cart is stored in the session as a list of product IDs
@@ -281,7 +283,7 @@ def instant_checkout(request):
             'quantity': quantity,
           }
         ],
-        success_url='http://localhost:5173/?status=success&session_id={CHECKOUT_SESSION_ID}',
+        success_url=f'http://localhost:5173/order_confirmed?status=success&order_id={order.id}&session_id={{CHECKOUT_SESSION_ID}}',
         cancel_url='http://localhost:5173/?status=cancel',
       )
     except Exception as exc:
@@ -386,8 +388,8 @@ def cart_checkout(request):
         payment_method_types=['card'],
         mode='payment',
         line_items=line_items,
-        success_url='http://localhost:5173/?status=success&session_id={CHECKOUT_SESSION_ID}',
-        cancel_url='http://localhost:5173/?status=cancel',
+        success_url=f'http://localhost:5173/order_confirmed?status=success&order_id={order.id}&session_id={{CHECKOUT_SESSION_ID}}',
+        cancel_url='http://localhost:5173/pending_order?status=cancel',
       )
     except Exception as exc:
       session = None
@@ -410,6 +412,56 @@ def cart_checkout(request):
     response_data['stripe_error'] = checkout_error or 'Stripe session not created.'
 
   return JsonResponse(response_data, status=201)
+
+
+@csrf_exempt
+@require_POST
+def save_order_address(request, order_id):
+  print('SAVE_ORDER_ADDRESS',request.body)
+  try:
+    payload = json.loads(request.body or '{}') if request.body else {}
+  except json.JSONDecodeError:
+    payload = {}
+
+  required_fields = ['full_name', 'email', 'line1', 'city', 'state', 'postal_code', 'country']
+  missing = [field for field in required_fields if not payload.get(field)]
+  if missing:
+    return JsonResponse({'detail': f"Missing fields: {', '.join(missing)}"}, status=400)
+
+  try:
+    order = Order.objects.get(pk=order_id)
+  except Order.DoesNotExist:
+    return JsonResponse({'detail': 'Order not found'}, status=404)
+
+  defaults = {
+    'full_name': payload.get('full_name', ''),
+    'email': payload.get('email', ''),
+    'phone': payload.get('phone', ''),
+    'line1': payload.get('line1', ''),
+    'line2': payload.get('line2', ''),
+    'city': payload.get('city', ''),
+    'state': payload.get('state', ''),
+    'postal_code': payload.get('postal_code', ''),
+    'country': payload.get('country', ''),
+  }
+
+  address, created = ShippingAddress.objects.update_or_create(order=order, defaults=defaults)
+
+  return JsonResponse({
+    'order_id': order.id,
+    'created': created,
+    'address': {
+      'full_name': address.full_name,
+      'email': address.email,
+      'phone': address.phone,
+      'line1': address.line1,
+      'line2': address.line2,
+      'city': address.city,
+      'state': address.state,
+      'postal_code': address.postal_code,
+      'country': address.country,
+    },
+  }, status=201 if created else 200)
 
 class ProductList(ListView):
   model = Product
@@ -490,6 +542,21 @@ def order_list(request):
         },
       })
 
+    address = getattr(order, 'shipping_address', None)
+    address_data = None
+    if address:
+      address_data = {
+        'full_name': address.full_name,
+        'email': address.email,
+        'phone': address.phone,
+        'line1': address.line1,
+        'line2': address.line2,
+        'city': address.city,
+        'state': address.state,
+        'postal_code': address.postal_code,
+        'country': address.country,
+      }
+
     return {
       'id': order.id,
       'created_at': order.created_at.isoformat(),
@@ -497,6 +564,7 @@ def order_list(request):
       'total': order.total,
       'currency': 'usd',
       'items': items,
+      'shipping_address': address_data,
     }
 
   return JsonResponse({

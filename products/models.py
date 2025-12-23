@@ -45,3 +45,21 @@ class Order(models.Model):
   cart_id = models.ForeignKey(Cart, on_delete=models.CASCADE)
   def __str__(self):
     return "cart_id" + str(self.cart_id) + "- total: "+ str(self.total)
+
+
+class ShippingAddress(models.Model):
+  order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='shipping_address')
+  full_name = models.CharField(max_length=255)
+  email = models.EmailField()
+  phone = models.CharField(max_length=50, blank=True, default='')
+  line1 = models.CharField(max_length=255)
+  line2 = models.CharField(max_length=255, blank=True, default='')
+  city = models.CharField(max_length=120)
+  state = models.CharField(max_length=120)
+  postal_code = models.CharField(max_length=20)
+  country = models.CharField(max_length=60, default='US')
+  created_at = models.DateTimeField(auto_now_add=True)
+  updated_at = models.DateTimeField(auto_now=True)
+
+  def __str__(self):
+    return f"shipping_address_order_{self.order_id}" 
